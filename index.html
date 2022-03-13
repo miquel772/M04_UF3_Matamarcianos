@@ -1,0 +1,98 @@
+<!doctype html>
+
+<html>
+<head>
+<title>MATAMARCIANOS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
+</head>
+<body>
+	<h1>MATAMARCIANOS</h1>
+
+<script>
+
+let game_w = 800;
+let game_h = 600;
+
+let config = {
+	width: game_w,
+	height: game_h,
+	physics: {
+		default: 'arcade',
+		arcade: {
+			debug: true
+		}
+	},
+	scene: {
+		preload: preload,
+		create: create,
+		update: update
+	}
+}
+
+let game = new Phaser.Game(config);
+
+let cursors;
+	
+let bg_img;
+
+let player_img;
+let player_speed = 2;
+
+let player_x = 100;
+let player_y = game_h/2;
+
+let enemy_img;
+
+let scale_size = 0.75;
+let offset_x = -200;
+
+let lives = 3;
+let score = 0;
+
+let lives_txt;
+let score_txt;
+
+function preload(){
+
+	cursors = this.input.keyboard.createCursorKeys();
+	this.load.image("background", "spaceBG.png");
+	this.load.image("player", "ship.png");
+	this.load.image("enemy", "enemy.png");
+}
+
+function create(){
+
+	bg_image = this.add.image(game_w/2,game_h/2,"background");
+
+	player_img = this.add.image(player_x,player_y,"player");
+	this.physics.add.existing(player_img, false);
+
+	enemy_img = this.add.image(300,100,"enemy");
+	this.physics.add.existing(enemy_img, false);
+
+	player_img.setScale(scale_size);
+	enemy_img.setScale(scale_size);
+	enemy_img.flipX = true;
+
+	this.add.text(game_w/2, 64, "VIDAS");
+	lives_txt = this.add.text(game_w/2+64, 64, "3");
+
+	this.add.text(game_w/2+128, 64, "PUNTOS");
+	score_txt = this.add.text(game_w/2+196, 64, "0");
+
+}
+
+function update(){
+
+	if (cursors.up.isDown){
+		player_img.y -= player_speed;
+	}
+	else if(cursors.down.isDown){
+		player_img.y += player_speed;
+	}
+}
+
+</script>
+
+</body>
+</html>

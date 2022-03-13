@@ -19,7 +19,7 @@ let config = {
 	physics: {
 		default: 'arcade',
 		arcade: {
-			debug: true
+			debug: false
 		}
 	},
 	scene: {
@@ -41,16 +41,40 @@ let player_speed = 2;
 let player_x = 100;
 let player_y = game_h/2;
 
-let enemy_img;
+let enemy1_img;
+let enemy2_img;
+let enemy3_img;
 
-let scale_size = 0.75;
-let offset_x = -200;
+let enemy1_alive = false;
+let enemy2_alive = false;
+let enemy3_alive = false;
+
+let enemy_speed = 1;
+
+let bullet1_img;
+let bullet2_img;
+let bullet3_img;
+
+let bullet1_able = true;
+let bullet2_able = true;
+let bullet3_able = true;
+
+let bullet_speed = 4;
+
+let eSpawn_x = game_w + 100;
+let eSpawn_y_max = 100;
+let eSpawn_y_min = game_h-100;
 
 let lives = 3;
+let bullets = 3;
 let score = 0;
 
 let lives_txt;
+let bullets_txt;
 let score_txt;
+
+let gameOver = false;
+let gameOver_txt;
 
 function preload(){
 
@@ -58,38 +82,198 @@ function preload(){
 	this.load.image("background", "spaceBG.png");
 	this.load.image("player", "ship.png");
 	this.load.image("enemy", "enemy.png");
+	this.load.image("bullet", "bullet.png");
 }
 
 function create(){
-
+	
 	bg_image = this.add.image(game_w/2,game_h/2,"background");
 
 	player_img = this.add.image(player_x,player_y,"player");
 	this.physics.add.existing(player_img, false);
 
-	enemy_img = this.add.image(300,100,"enemy");
-	this.physics.add.existing(enemy_img, false);
+	enemy1_img = this.add.image(eSpawn_x, 100,"enemy");
+	this.physics.add.existing(enemy1_img, false);
+	enemy1_alive = true;
+	enemy2_img = this.add.image(eSpawn_x, 300,"enemy");
+	this.physics.add.existing(enemy2_img, false);
+	enemy2_alive = true;
+	enemy3_img = this.add.image(eSpawn_x, 500,"enemy");
+	this.physics.add.existing(enemy3_img, false);
+	enemy3_alive = true;
 
-	player_img.setScale(scale_size);
-	enemy_img.setScale(scale_size);
-	enemy_img.flipX = true;
+	bullet1_img = this.add.image(0, -500, "bullet");
+	this.physics.add.existing(bullet1_img, false);
+	bullet2_img = this.add.image(0, -500, "bullet");
+	this.physics.add.existing(bullet2_img, false);
+	bullet3_img = this.add.image(0, -500, "bullet");
+	this.physics.add.existing(bullet3_img, false);
 
-	this.add.text(game_w/2, 64, "VIDAS");
-	lives_txt = this.add.text(game_w/2+64, 64, "3");
+	this.add.text(game_w/2 - 200, 20, "VIDAS");
+	lives_txt = this.add.text(game_w/2 - 130, 20, "3");
 
-	this.add.text(game_w/2+128, 64, "PUNTOS");
-	score_txt = this.add.text(game_w/2+196, 64, "0");
+	this.add.text(game_w/2 - 50, 20, "BALAS");
+	bullets_txt = this.add.text(game_w/2 + 20, 20, "3");
 
+	this.add.text(game_w/2 + 100, 20, "PUNTOS");
+	score_txt = this.add.text(game_w/2 + 170, 20, "0");
+	
+	gameOver_txt = this.add.text(game_w/2 - 50, game_h/2, "");
+
+	let enemies = [enemy1_img, enemy2_img, enemy3_img];
+	let bullets = [bullet1_img, bullet2_img, bullet3_img];
+
+	for (let i = 0; i < enemies.length; i++){
+		this.physics.add.collider(player_img, enemies[i], function (player, enemy){
+			gameOver = true;
+			gameOver_txt.text = "GAME OVER";
+
+		});
+	}
+
+	for (let i = 0; i < bullets.length; i++){
+		for (let j = 0; j < enemies.length; j++){
+			this.physics.add.collider(bullets[i], enemies[j], function (bullet, enemy){
+				enemy.y = -1000;
+				bullet.y = -500;
+				score++;
+				score_txt.text = score.toString();
+			});
+		}
+	}
 }
 
 function update(){
+	
+	if(!gameOver){
 
-	if (cursors.up.isDown){
-		player_img.y -= player_speed;
+		spawnEnemies();
+		bullets = checkBullets();
+		bullets_txt.text = bullets.toString();
+	
+		if (cursors.up.isDown && player_img.y > 50){
+			player_img.y -= player_speed;
+		}
+		else if(cursors.down.isDown && player_img.y < game_h - 50){
+			player_img.y += player_speed;
+		}
+		else if (cursors.space.isDown && canShoot()){
+			shoot();
+		}
+	
+		enemy1_img.x -= enemy_speed;
+		enemy2_img.x -= enemy_speed;
+		enemy3_img.x -= enemy_speed;
+	
+		bullet1_img.x += bullet_speed;
+		bullet2_img.x += bullet_speed;
+		bullet3_img.x += bullet_speed;
+	
+		if(checkIfEnemyHit()){
+			lives--;
+			lives_txt.text = lives.toString();
+		}
+
+		if (enemy1_img.y < 0){enemy1_alive = false;};
+		if (enemy2_img.y < 0){enemy2_alive = false;};
+		if (enemy3_img.y < 0){enemy3_alive = false;};
+
+		if (bullet1_img.y < 0){bullet1_able = true;};
+		if (bullet2_img.y < 0){bullet2_able = true;};
+		if (bullet3_img.y < 0){bullet3_able = true;};
+
+		resetBullets();
+
+		if(lives<=0){
+			gameOver=true;
+			gameOver_txt.text = "GAME OVER";
+		}
 	}
-	else if(cursors.down.isDown){
-		player_img.y += player_speed;
+}
+
+function spawnEnemies(){
+	
+	if (!enemy1_alive){
+		enemy1_img.x = eSpawn_x;
+		enemy1_img.y = Math.random() * (eSpawn_y_max - eSpawn_y_min) + eSpawn_y_min;
+		enemy1_alive = true;
 	}
+
+	if (!enemy2_alive){
+		enemy2_img.x = eSpawn_x;
+		enemy2_img.y = Math.random() * (eSpawn_y_max - eSpawn_y_min) + eSpawn_y_min;
+		enemy2_alive = true;
+	}
+
+	if (!enemy3_alive){
+		enemy3_img.x = eSpawn_x;
+		enemy3_img.y = Math.random() * (eSpawn_y_max - eSpawn_y_min) + eSpawn_y_min;
+		enemy3_alive = true;
+	}
+}
+
+function shoot (){
+
+	if(bullet1_able){
+		bullet1_img.x = player_img.x + 32;
+		bullet1_img.y = player_img.y;
+		bullet1_able = false;
+		return;
+	}
+	if(bullet2_able){
+		bullet2_img.x = player_img.x + 32;
+		bullet2_img.y = player_img.y;
+		bullet2_able = false;
+		return;
+	}
+	if(bullet3_able){
+		bullet3_img.x = player_img.x + 32;
+		bullet3_img.y = player_img.y;
+		bullet3_able = false;
+		return;
+	}
+}
+
+function canShoot(){
+	if(bullet1_img.x > 400 && bullet2_img.x > 400 && bullet3_img.x > 400) {return true;}
+	return false;
+}
+
+function resetBullets(){
+
+	if(bullet1_img.x > 1000){
+		bullet1_able = true;
+	}
+	if(bullet2_img.x > 1000){
+		bullet2_able = true;
+	}
+	if(bullet3_img.x > 1000){
+		bullet3_able = true;
+	}
+}
+
+function checkBullets(){
+	let aux = 0;
+	if(bullet1_able){aux++;}
+	if(bullet2_able){aux++;}
+	if(bullet3_able){aux++;}
+	return aux;
+}
+
+function checkIfEnemyHit(){
+	if (enemy1_img.x < 0){
+		enemy1_img.y = -1000;
+		return true;
+	}
+	if (enemy2_img.x < 0){
+		enemy2_img.y = -1000;
+		return true;
+	}
+	if (enemy3_img.x < 0){
+		enemy3_img.y = -1000;
+		return true;
+	}
+	return false;
 }
 
 </script>
